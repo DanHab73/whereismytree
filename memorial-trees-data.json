@@ -9,7 +9,7 @@
       "plantedBy": "Wednesday",
       "plantingDate": "2025-07-13",
       "notes": "",
-      "recordedOn": "2025-07-13T09:37:24.126Z"
+      "recordedOn": "2025-07-13T09:38:33.004Z"
     },
     {
       "lat": 341.30244200578096,
@@ -20,9 +20,20 @@
       "plantedBy": "Charlotte",
       "plantingDate": "2025-07-13",
       "notes": "",
-      "recordedOn": "2025-07-13T09:37:24.126Z"
+      "recordedOn": "2025-07-13T09:38:33.004Z"
+    },
+    {
+      "lat": 223.57093762051156,
+      "lng": 620.7661140314204,
+      "coordinates": "X:61, Y:71",
+      "treeType": "Tree Green",
+      "inMemoryOf": "Yellow",
+      "plantedBy": "Orange",
+      "plantingDate": "2025-07-13",
+      "notes": "Testing",
+      "recordedOn": "2025-07-13T09:38:33.004Z"
     }
   ],
-  "lastUpdated": "2025-07-13T09:37:24.126Z",
+  "lastUpdated": "2025-07-13T09:38:33.004Z",
   "version": "1.0"
 }
