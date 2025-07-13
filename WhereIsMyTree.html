@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Maumahara Matariki - Memorial Tree Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html,body{height:100%;margin:0;font-family:sans-serif;}
+    #map{height:100%;width:100%;}
+    .leaflet-popup-content{width:280px;}
+    #toolbar{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:rgba(255,255,255,0.95);padding:12px 18px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:flex;gap:15px;align-items:center;flex-wrap:wrap;max-width:90vw;}
+    #exportBtn{padding:8px 15px;border:none;background:#8B4513;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;}
+    #exportBtn:hover{background:#654321;}
+    #coordinateToggle{padding:8px 15px;border:none;background:#2563eb;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;margin-left:10px;}
+    #coordinateToggle:hover{background:#1d4ed8;}
+    select{padding:6px;border-radius:6px;border:1px solid #d1d5db;}
+    .custom-marker{transform:translate(-12px,-12px);} 
+    .tree-form{display:flex;flex-direction:column;gap:10px;}
+    .tree-form input, .tree-form textarea{padding:8px;border-radius:6px;border:1px solid #d1d5db;width:100%;box-sizing:border-box;font-family:inherit;}
+    .tree-form button{padding:8px 15px;border:none;border-radius:6px;cursor:pointer;font-weight:500;}
+    .save-btn{background:#8B4513;color:#fff;}
+    .save-btn:hover{background:#654321;}
+    .delete-btn{background:#dc2626;color:#fff;}
+    .delete-btn:hover{background:#b91c1c;}
+    .tree-info{font-size:0.9rem;color:#374151;margin-bottom:10px;line-height:1.4;}
+    h3{margin:0 0 10px 0;color:#8B4513;font-size:1.2rem;}
+    h4{margin:0;color:#8B4513;font-size:1rem;}
+    .maori-subtitle{font-size:0.8rem;color:#6B7280;font-style:italic;}
+    .coordinate-grid{stroke:#333;stroke-width:0.5;fill:none;opacity:0.7;}
+    .coordinate-labels{font-size:10px;fill:#333;font-family:monospace;}
+         .memorial-icon{width:24px;height:24px;border-radius:50%;background:#8B4513;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid white;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);}
+     .leaflet-tooltip{background:rgba(0,0,0,0.8)!important;color:#fff!important;padding:8px 10px!important;border-radius:6px!important;font-size:0.9rem!important;box-shadow:0 2px 8px rgba(0,0,0,0.3)!important;max-width:250px!important;line-height:1.3!important;border:none!important;}
+     .leaflet-tooltip-top:before{border-top-color:rgba(0,0,0,0.8)!important;}
+     #loginBtn{padding:8px 15px;border:none;background:#2563eb;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;margin-left:10px;}
+     #loginBtn:hover{background:#1d4ed8;}
+     #logoutBtn{padding:8px 15px;border:none;background:#dc2626;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;margin-left:10px;}
+     #logoutBtn:hover{background:#b91c1c;}
+     .login-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;z-index:2000;align-items:center;justify-content:center;}
+     .login-form{background:#fff;padding:30px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-width:400px;width:90%;text-align:center;}
+     .login-form h3{margin:0 0 20px 0;color:#8B4513;}
+     .login-form input{width:100%;padding:12px;margin:10px 0;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;box-sizing:border-box;}
+     .login-form button{width:100%;padding:12px;margin:10px 0;border:none;border-radius:6px;font-size:1rem;cursor:pointer;font-weight:500;}
+     .login-submit{background:#8B4513;color:#fff;}
+     .login-submit:hover{background:#654321;}
+     .login-cancel{background:#6B7280;color:#fff;}
+     .login-cancel:hover{background:#4B5563;}
+     .editing-disabled{opacity:0.5;pointer-events:none;}
+     .view-only-notice{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);padding:8px 16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:0.9rem;color:#6B7280;z-index:1000;}
+  </style>
+</head>
+<body>
+      <div id="toolbar">
+      <div>
+        <h3 style="margin:0 0 4px 0;color:#8B4513;font-size:1.3rem;">Ōtara Creek Reserve</h3>
+        <h4>🌳 Maumahara Matariki</h4>
+        <div class="maori-subtitle">Memorial Stake and Tree Event</div>
+      </div>
+            <button id="exportBtn">📋 Export Memorial Data</button>
+      <button id="coordinateToggle">📍 Hide Grid</button>
+      <button id="loginBtn">🔐 Log in to Update Map</button>
+      <button id="logoutBtn" style="display:none;">🚪 Log out</button>
+    </div>
+    <div id="map"></div>
+    <div class="view-only-notice" id="viewOnlyNotice">
+      👁️ View-only mode - Log in to add memorial trees
+    </div>
+    
+    <!-- Login Modal -->
+    <div class="login-modal" id="loginModal">
+      <div class="login-form">
+        <h3>🔐 Administrator Login</h3>
+        <p style="color:#6B7280;margin-bottom:20px;">Enter the administrator password to edit the memorial tree map</p>
+        <input type="password" id="loginPassword" placeholder="Administrator password" />
+        <button class="login-submit" id="loginSubmit">🌳 Access Map Editor</button>
+        <button class="login-cancel" id="loginCancel">❌ Cancel</button>
+      </div>
+    </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    /* -------- CONFIG: Local image -------- */
+    const imageUrl = "DJI_0028SM.jpeg";
+    const imgWidth = 1024;
+    const imgHeight = 768;
+
+    /* ---------- INIT LEAFLET ---------- */
+    if (typeof L === "undefined") {
+      document.getElementById("map").innerHTML = "<p style='padding:1rem'>⚠️ Leaflet failed to load. Open this file in a normal browser or allow CDN scripts.</p>";
+      throw new Error("Leaflet missing");
+    }
+
+    const map = L.map("map", { crs: L.CRS.Simple, minZoom: -2, zoomSnap: 0.25 });
+
+    // Load the local image
+    const testImg = new Image();
+    testImg.onload = () => {
+      const bounds = [[0,0],[imgHeight,imgWidth]];
+      L.imageOverlay(imageUrl,bounds).addTo(map);
+      map.fitBounds(bounds);
+      
+      // Initialize grid (default to on)
+      coordinateGrid = createCoordinateGrid();
+      coordinateGrid.addTo(map);
+    };
+    testImg.onerror = () => {
+      document.getElementById("map").innerHTML = `<p style='padding:1rem'>⚠️ Could not load the image file.<br>Make sure the file "DJI_0028SM.jpeg" is in the same directory as this HTML file.</p>`;
+    };
+    testImg.src = imageUrl;
+
+    /* ---------- COORDINATE GRID SYSTEM ---------- */
+    let coordinateGrid = null;
+    let showGrid = true; // Default to on
+
+    function createCoordinateGrid() {
+      const gridGroup = L.layerGroup();
+      
+      // Calculate grid spacing
+      const gridSpacingX = imgWidth / 100;
+      const gridSpacingY = imgHeight / 100;
+      
+      // Create grid lines using Leaflet polylines for proper zoom scaling
+      const gridOptions = {
+        color: '#333',
+        weight: 0.5,
+        opacity: 0.7
+      };
+      
+      // Add vertical lines
+      for (let i = 0; i <= 100; i += 10) {
+        const x = i * gridSpacingX;
+        const verticalLine = L.polyline([[0, x], [imgHeight, x]], gridOptions);
+        gridGroup.addLayer(verticalLine);
+        
+        // Add labels every 20 units
+        if (i % 20 === 0) {
+          const labelMarker = L.marker([imgHeight - 30, x], {
+            icon: L.divIcon({
+              className: 'coordinate-label',
+              html: `<div style="font-size:10px;color:#333;font-family:monospace;background:rgba(255,255,255,0.8);padding:2px 4px;border-radius:3px;">${i}</div>`,
+              iconSize: [20, 15],
+              iconAnchor: [10, 7]
+            })
+          });
+          gridGroup.addLayer(labelMarker);
+        }
+      }
+      
+      // Add horizontal lines
+      for (let i = 0; i <= 100; i += 10) {
+        const y = i * gridSpacingY;
+        const horizontalLine = L.polyline([[imgHeight - y, 0], [imgHeight - y, imgWidth]], gridOptions);
+        gridGroup.addLayer(horizontalLine);
+        
+        // Add labels every 20 units
+        if (i % 20 === 0) {
+          const labelMarker = L.marker([imgHeight - y, 30], {
+            icon: L.divIcon({
+              className: 'coordinate-label',
+              html: `<div style="font-size:10px;color:#333;font-family:monospace;background:rgba(255,255,255,0.8);padding:2px 4px;border-radius:3px;">${i}</div>`,
+              iconSize: [20, 15],
+              iconAnchor: [10, 7]
+            })
+          });
+          gridGroup.addLayer(labelMarker);
+        }
+      }
+      
+      return gridGroup;
+    }
+
+    function toggleCoordinateGrid() {
+      if (showGrid) {
+        if (coordinateGrid) {
+          map.removeLayer(coordinateGrid);
+        }
+        showGrid = false;
+        document.getElementById("coordinateToggle").textContent = "📍 Show Grid";
+      } else {
+        if (!coordinateGrid) {
+          coordinateGrid = createCoordinateGrid();
+        }
+        coordinateGrid.addTo(map);
+        showGrid = true;
+        document.getElementById("coordinateToggle").textContent = "📍 Hide Grid";
+      }
+    }
+
+    // Convert map coordinates to grid coordinates
+    function mapToGridCoordinates(latlng) {
+      const gridX = Math.round((latlng.lng / imgWidth) * 100);
+      const gridY = Math.round(((imgHeight - latlng.lat) / imgHeight) * 100);
+      return { x: gridX, y: gridY };
+    }
+
+    // Convert grid coordinates back to map coordinates
+    function gridToMapCoordinates(gridX, gridY) {
+      const lng = (gridX / 100) * imgWidth;
+      const lat = imgHeight - (gridY / 100) * imgHeight;
+      return { lat, lng };
+    }
+
+    /* ---------- Memorial Tree Functions ---------- */
+    function memorialIcon() {
+      return L.divIcon({
+        className: "custom-marker",
+        html: `<div class="memorial-icon">🌳</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+    }
+
+    function getCurrentDate() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function treePopupHTML(tree = {}) {
+      const { treeType = '', inMemoryOf = '', plantedBy = '', plantingDate = getCurrentDate(), notes = '', coordinates = '' } = tree;
+      return `
+        <div class="tree-form">
+          <h3>🌳 Memorial Tree Details</h3>
+          <div class="tree-info">Maumahara Matariki - Memorial Stake and Tree Event<br>Recording trees planted in memory of loved ones</div>
+          
+          <label><strong>Tree Type:</strong></label>
+          <input type="text" id="popupTreeType" placeholder="Enter tree species/type" value="${treeType}">
+          
+          <label><strong>In Memory of:</strong></label>
+          <input type="text" id="popupInMemoryOf" placeholder="Name of loved one being remembered" value="${inMemoryOf}">
+          
+          <label><strong>Planted by:</strong></label>
+          <input type="text" id="popupPlantedBy" placeholder="Name of person/family who planted" value="${plantedBy}">
+          
+          <label><strong>Planting Date:</strong></label>
+          <input type="date" id="popupPlantingDate" value="${plantingDate}">
+          
+          <label><strong>Grid Coordinates:</strong></label>
+          <input type="text" id="popupCoordinates" placeholder="e.g., X:45, Y:67" value="${coordinates}" readonly>
+          
+          <label><strong>Notes:</strong></label>
+          <textarea id="popupNotes" rows="3" placeholder="Additional notes, memories, or details...">${notes}</textarea>
+          
+          <div style="display:flex;gap:10px;">
+            <button class="save-btn">💾 Save Memorial</button>
+            <button class="delete-btn">🗑️ Remove</button>
+          </div>
+        </div>
+      `;
+    }
+
+    const memorialTrees = [];
+    
+    function addMemorialTree(latlng, treeData = {}) {
+      const gridCoords = mapToGridCoordinates(latlng);
+      const coordinates = `X:${gridCoords.x}, Y:${gridCoords.y}`;
+      
+      const defaultData = {
+        treeType: '',
+        inMemoryOf: '',
+        plantedBy: '',
+        plantingDate: getCurrentDate(),
+        notes: '',
+        coordinates: coordinates
+      };
+      
+      const tree = { ...defaultData, ...treeData };
+      const marker = L.marker(latlng, {
+        draggable: true,
+        icon: memorialIcon()
+      }).addTo(map);
+      
+      // Add hover tooltip
+      function getTooltipContent(tree) {
+        let content = '';
+        if (tree.inMemoryOf) {
+          content += `<strong>In Memory of:</strong> ${tree.inMemoryOf}<br>`;
+        }
+        if (tree.plantedBy) {
+          content += `<strong>Planted by:</strong> ${tree.plantedBy}<br>`;
+        }
+        if (tree.treeType) {
+          content += `<strong>Tree Type:</strong> ${tree.treeType}<br>`;
+        }
+        if (tree.plantingDate) {
+          content += `<strong>Planted:</strong> ${tree.plantingDate}<br>`;
+        }
+        content += `<strong>Coordinates:</strong> ${tree.coordinates}`;
+        return content;
+      }
+      
+      marker.bindTooltip(getTooltipContent(tree), {
+        permanent: false,
+        direction: 'top',
+        offset: [0, -10]
+      });
+      
+      marker.bindPopup(treePopupHTML(tree), {
+        closeOnClick: false,
+        maxWidth: 320
+      }).openPopup();
+      
+      const treeObj = { marker, ...tree };
+      memorialTrees.push(treeObj);
+      
+      // Update coordinates when marker is dragged
+      marker.on('dragend', function(e) {
+        const newGridCoords = mapToGridCoordinates(e.target.getLatLng());
+        const newCoordinates = `X:${newGridCoords.x}, Y:${newGridCoords.y}`;
+        
+        const treeIndex = memorialTrees.findIndex(t => t.marker === marker);
+        if (treeIndex > -1) {
+          memorialTrees[treeIndex].coordinates = newCoordinates;
+          // Update tooltip with new coordinates
+          marker.setTooltipContent(getTooltipContent(memorialTrees[treeIndex]));
+          // Update the popup if it's open
+          if (marker.getPopup().isOpen()) {
+            const coordInput = document.getElementById('popupCoordinates');
+            if (coordInput) {
+              coordInput.value = newCoordinates;
+            }
+          }
+        }
+      });
+      
+      marker.on("popupopen", e => {
+        const root = e.popup.getElement();
+        const treeTypeInput = root.querySelector("#popupTreeType");
+        const inMemoryOfInput = root.querySelector("#popupInMemoryOf");
+        const plantedByInput = root.querySelector("#popupPlantedBy");
+        const plantingDateInput = root.querySelector("#popupPlantingDate");
+        const coordinatesInput = root.querySelector("#popupCoordinates");
+        const notesTextarea = root.querySelector("#popupNotes");
+        const saveBtn = root.querySelector(".save-btn");
+        const deleteBtn = root.querySelector(".delete-btn");
+        
+                 saveBtn.addEventListener("click", () => {
+           const treeIndex = memorialTrees.findIndex(t => t.marker === marker);
+           if (treeIndex > -1) {
+             memorialTrees[treeIndex].treeType = treeTypeInput.value;
+             memorialTrees[treeIndex].inMemoryOf = inMemoryOfInput.value;
+             memorialTrees[treeIndex].plantedBy = plantedByInput.value;
+             memorialTrees[treeIndex].plantingDate = plantingDateInput.value;
+             memorialTrees[treeIndex].coordinates = coordinatesInput.value;
+             memorialTrees[treeIndex].notes = notesTextarea.value;
+             
+             // Update tooltip with new data
+             marker.setTooltipContent(getTooltipContent(memorialTrees[treeIndex]));
+             
+             marker.closePopup();
+           }
+         });
+        
+        deleteBtn.addEventListener("click", () => {
+          const treeIndex = memorialTrees.findIndex(t => t.marker === marker);
+          if (treeIndex > -1) {
+            memorialTrees.splice(treeIndex, 1);
+            map.removeLayer(marker);
+          }
+        });
+      });
+      
+      return treeObj;
+    }
+
+    // Authentication system
+    let isAuthenticated = false;
+    const ADMIN_PASSWORD = "otara2024"; // Change this to your desired password
+    
+    function setEditingMode(enabled) {
+      isAuthenticated = enabled;
+      const viewOnlyNotice = document.getElementById("viewOnlyNotice");
+      const loginBtn = document.getElementById("loginBtn");
+      const logoutBtn = document.getElementById("logoutBtn");
+      
+      if (enabled) {
+        viewOnlyNotice.style.display = "none";
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        // Enable map editing
+        map.on("click", handleMapClick);
+      } else {
+        viewOnlyNotice.style.display = "block";
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        // Disable map editing
+        map.off("click", handleMapClick);
+      }
+    }
+    
+    function handleMapClick(e) {
+      if (isAuthenticated) {
+        addMemorialTree(e.latlng);
+      }
+    }
+    
+    // Initialize in view-only mode
+    setEditingMode(false);
+
+    // Toggle coordinate grid
+    document.getElementById("coordinateToggle").addEventListener("click", toggleCoordinateGrid);
+    
+    // Login system event listeners
+    document.getElementById("loginBtn").addEventListener("click", () => {
+      document.getElementById("loginModal").style.display = "flex";
+      document.getElementById("loginPassword").focus();
+    });
+    
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      setEditingMode(false);
+    });
+    
+    document.getElementById("loginCancel").addEventListener("click", () => {
+      document.getElementById("loginModal").style.display = "none";
+      document.getElementById("loginPassword").value = "";
+    });
+    
+    document.getElementById("loginSubmit").addEventListener("click", () => {
+      const password = document.getElementById("loginPassword").value;
+      if (password === ADMIN_PASSWORD) {
+        setEditingMode(true);
+        document.getElementById("loginModal").style.display = "none";
+        document.getElementById("loginPassword").value = "";
+      } else {
+        alert("❌ Incorrect password. Please try again.");
+        document.getElementById("loginPassword").value = "";
+        document.getElementById("loginPassword").focus();
+      }
+    });
+    
+    // Handle Enter key in password field
+    document.getElementById("loginPassword").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        document.getElementById("loginSubmit").click();
+      }
+    });
+    
+    // Close modal when clicking outside
+    document.getElementById("loginModal").addEventListener("click", (e) => {
+      if (e.target === document.getElementById("loginModal")) {
+        document.getElementById("loginCancel").click();
+      }
+    });
+
+    // Export memorial tree data
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const data = memorialTrees.map(t => ({
+        lat: t.marker.getLatLng().lat,
+        lng: t.marker.getLatLng().lng,
+        coordinates: t.coordinates,
+        treeType: t.treeType,
+        inMemoryOf: t.inMemoryOf,
+        plantedBy: t.plantedBy,
+        plantingDate: t.plantingDate,
+        notes: t.notes,
+        recordedOn: new Date().toISOString()
+      }));
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `maumahara-matariki-memorial-trees-${getCurrentDate()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
