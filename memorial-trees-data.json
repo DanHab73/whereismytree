@@ -9,9 +9,20 @@
       "plantedBy": "Wednesday",
       "plantingDate": "2025-07-13",
       "notes": "",
-      "recordedOn": "2025-07-13T09:37:04.589Z"
+      "recordedOn": "2025-07-13T09:37:24.126Z"
+    },
+    {
+      "lat": 341.30244200578096,
+      "lng": 343.08625267828506,
+      "coordinates": "X:34, Y:56",
+      "treeType": "Vege Garden",
+      "inMemoryOf": "Otara Community",
+      "plantedBy": "Charlotte",
+      "plantingDate": "2025-07-13",
+      "notes": "",
+      "recordedOn": "2025-07-13T09:37:24.126Z"
     }
   ],
-  "lastUpdated": "2025-07-13T09:37:04.589Z",
+  "lastUpdated": "2025-07-13T09:37:24.126Z",
   "version": "1.0"
 }
