@@ -29,6 +29,8 @@
     .coordinate-grid{stroke:#333;stroke-width:0.5;fill:none;opacity:0.7;}
     .coordinate-labels{font-size:10px;fill:#333;font-family:monospace;}
          .memorial-icon{width:24px;height:24px;border-radius:50%;background:#8B4513;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid white;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);}
+         .memorial-icon.empty-memorial{background:#6B7280;border-color:#E5E7EB;animation:pulse 2s infinite;}
+         @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
      .leaflet-tooltip{background:rgba(0,0,0,0.8)!important;color:#fff!important;padding:8px 10px!important;border-radius:6px!important;font-size:0.9rem!important;box-shadow:0 2px 8px rgba(0,0,0,0.3)!important;max-width:250px!important;line-height:1.3!important;border:none!important;}
      .leaflet-tooltip-top:before{border-top-color:rgba(0,0,0,0.8)!important;}
      #loginBtn{padding:8px 15px;border:none;background:#2563eb;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;margin-left:10px;}
@@ -62,7 +64,7 @@
     </div>
     <div id="map"></div>
     <div class="view-only-notice" id="viewOnlyNotice">
-      👁️ View-only mode - Log in to add memorial trees
+      👁️ View-only mode - Log in to plant memorial trees
     </div>
     
     <!-- Login Modal -->
@@ -200,10 +202,10 @@
     }
 
     /* ---------- Memorial Tree Functions ---------- */
-    function memorialIcon() {
+    function memorialIcon(isEmpty = false) {
       return L.divIcon({
         className: "custom-marker",
-        html: `<div class="memorial-icon">🌳</div>`,
+        html: `<div class="memorial-icon ${isEmpty ? 'empty-memorial' : ''}">${isEmpty ? '🌲' : '🌳'}</div>`,
         iconSize: [28, 28],
         iconAnchor: [14, 14]
       });
@@ -262,9 +264,13 @@
       };
       
       const tree = { ...defaultData, ...treeData };
+      
+      // Check if tree has details filled in
+      const isEmpty = !tree.inMemoryOf && !tree.plantedBy && !tree.treeType;
+      
       const marker = L.marker(latlng, {
         draggable: true,
-        icon: memorialIcon()
+        icon: memorialIcon(isEmpty)
       }).addTo(map);
       
       // Add hover tooltip
@@ -283,6 +289,12 @@
           content += `<strong>Planted:</strong> ${tree.plantingDate}<br>`;
         }
         content += `<strong>Coordinates:</strong> ${tree.coordinates}`;
+        
+        // Add instruction for new trees
+        if (!tree.inMemoryOf && !tree.plantedBy && !tree.treeType) {
+          content += '<br><em>Click to add memorial details</em>';
+        }
+        
         return content;
       }
       
@@ -297,13 +309,27 @@
         maxWidth: 320
       });
       
-      // Only open popup for new trees, not when loading from GitHub
-      if (shouldSaveToGitHub) {
-        marker.openPopup();
-      }
+      // NEW APPROACH: Don't open popup immediately for new trees
+      // User must click on the tree marker to edit it
       
       const treeObj = { marker, ...tree };
       memorialTrees.push(treeObj);
+      
+      // Auto-save new trees immediately with default values
+      if (shouldSaveToGitHub) {
+        saveTreeDataToGitHub().then(() => {
+          // Show success message for tree placement
+          showSaveStatus("🌳 Memorial tree planted! Click on it to add details.", "success");
+        }).catch(error => {
+          console.error("Error saving new tree:", error);
+        });
+      }
+      
+      // Add click handler to open editing form
+      marker.on('click', function(e) {
+        // Ensure the popup opens when clicking on the marker
+        marker.openPopup();
+      });
       
       // Update coordinates when marker is dragged
       marker.on('dragend', async function(e) {
@@ -332,45 +358,152 @@
       
       marker.on("popupopen", e => {
         const root = e.popup.getElement();
-        const treeTypeInput = root.querySelector("#popupTreeType");
-        const inMemoryOfInput = root.querySelector("#popupInMemoryOf");
-        const plantedByInput = root.querySelector("#popupPlantedBy");
-        const plantingDateInput = root.querySelector("#popupPlantingDate");
-        const coordinatesInput = root.querySelector("#popupCoordinates");
-        const notesTextarea = root.querySelector("#popupNotes");
-        const saveBtn = root.querySelector(".save-btn");
-        const deleteBtn = root.querySelector(".delete-btn");
         
-                 saveBtn.addEventListener("click", async () => {
-           const treeIndex = memorialTrees.findIndex(t => t.marker === marker);
-           if (treeIndex > -1) {
-             memorialTrees[treeIndex].treeType = treeTypeInput.value;
-             memorialTrees[treeIndex].inMemoryOf = inMemoryOfInput.value;
-             memorialTrees[treeIndex].plantedBy = plantedByInput.value;
-             memorialTrees[treeIndex].plantingDate = plantingDateInput.value;
-             memorialTrees[treeIndex].coordinates = coordinatesInput.value;
-             memorialTrees[treeIndex].notes = notesTextarea.value;
-             
-             // Update tooltip with new data
-             marker.setTooltipContent(getTooltipContent(memorialTrees[treeIndex]));
-             
-             marker.closePopup();
-             
-             // Save to GitHub
-             await saveTreeDataToGitHub();
-           }
-         });
-        
-        deleteBtn.addEventListener("click", async () => {
-          const treeIndex = memorialTrees.findIndex(t => t.marker === marker);
-          if (treeIndex > -1) {
-            memorialTrees.splice(treeIndex, 1);
-            map.removeLayer(marker);
-            
-            // Save to GitHub
-            await saveTreeDataToGitHub();
+        // Add a small delay to ensure DOM is fully rendered
+        setTimeout(() => {
+          const treeTypeInput = root.querySelector("#popupTreeType");
+          const inMemoryOfInput = root.querySelector("#popupInMemoryOf");
+          const plantedByInput = root.querySelector("#popupPlantedBy");
+          const plantingDateInput = root.querySelector("#popupPlantingDate");
+          const coordinatesInput = root.querySelector("#popupCoordinates");
+          const notesTextarea = root.querySelector("#popupNotes");
+          const saveBtn = root.querySelector(".save-btn");
+          const deleteBtn = root.querySelector(".delete-btn");
+          
+          // Debug: Check if all elements are found
+          if (!saveBtn || !deleteBtn || !treeTypeInput || !inMemoryOfInput || !plantedByInput || !plantingDateInput || !coordinatesInput || !notesTextarea) {
+            console.error("❌ Some form elements not found:", {
+              saveBtn: !!saveBtn,
+              deleteBtn: !!deleteBtn,
+              treeTypeInput: !!treeTypeInput,
+              inMemoryOfInput: !!inMemoryOfInput,
+              plantedByInput: !!plantedByInput,
+              plantingDateInput: !!plantingDateInput,
+              coordinatesInput: !!coordinatesInput,
+              notesTextarea: !!notesTextarea
+            });
+            return;
           }
-        });
+          
+          // Remove any existing event listeners to prevent duplicates
+          const newSaveBtn = saveBtn.cloneNode(true);
+          const newDeleteBtn = deleteBtn.cloneNode(true);
+          saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+          deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+          
+          // Add save button event listener
+          newSaveBtn.addEventListener("click", async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            console.log("💾 Save button clicked");
+            
+            // Disable button during save to prevent double-clicks
+            newSaveBtn.disabled = true;
+            newSaveBtn.textContent = "💾 Saving...";
+            
+            try {
+              const treeIndex = memorialTrees.findIndex(t => t.marker === marker);
+              if (treeIndex > -1) {
+                // Get current values from inputs
+                const currentTreeType = treeTypeInput.value.trim();
+                const currentInMemoryOf = inMemoryOfInput.value.trim();
+                const currentPlantedBy = plantedByInput.value.trim();
+                const currentPlantingDate = plantingDateInput.value;
+                const currentCoordinates = coordinatesInput.value.trim();
+                const currentNotes = notesTextarea.value.trim();
+                
+                // Update the memorial tree object
+                memorialTrees[treeIndex].treeType = currentTreeType;
+                memorialTrees[treeIndex].inMemoryOf = currentInMemoryOf;
+                memorialTrees[treeIndex].plantedBy = currentPlantedBy;
+                memorialTrees[treeIndex].plantingDate = currentPlantingDate;
+                memorialTrees[treeIndex].coordinates = currentCoordinates;
+                memorialTrees[treeIndex].notes = currentNotes;
+                
+                console.log("📝 Updated tree data:", memorialTrees[treeIndex]);
+                
+                // Update tooltip with new data
+                marker.setTooltipContent(getTooltipContent(memorialTrees[treeIndex]));
+                
+                // Update icon to filled if tree now has details
+                const hasDetails = currentInMemoryOf || currentPlantedBy || currentTreeType;
+                if (hasDetails) {
+                  marker.setIcon(memorialIcon(false)); // false = not empty
+                }
+                
+                // Close popup
+                marker.closePopup();
+                
+                // Save to GitHub
+                await saveTreeDataToGitHub();
+                
+              } else {
+                console.error("❌ Tree not found in memorialTrees array");
+                showSaveStatus("❌ Error: Tree not found", "error");
+              }
+              
+            } catch (error) {
+              console.error("❌ Error saving tree:", error);
+              showSaveStatus("❌ Error saving memorial tree", "error");
+            } finally {
+              // Re-enable button
+              newSaveBtn.disabled = false;
+              newSaveBtn.textContent = "💾 Save Memorial";
+            }
+          });
+          
+          // Add delete button event listener
+          newDeleteBtn.addEventListener("click", async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if (confirm("Are you sure you want to remove this memorial tree?")) {
+              console.log("🗑️ Delete button clicked");
+              
+              // Disable button during deletion
+              newDeleteBtn.disabled = true;
+              newDeleteBtn.textContent = "🗑️ Removing...";
+              
+              try {
+                const treeIndex = memorialTrees.findIndex(t => t.marker === marker);
+                if (treeIndex > -1) {
+                  memorialTrees.splice(treeIndex, 1);
+                  map.removeLayer(marker);
+                  
+                  // Save to GitHub
+                  await saveTreeDataToGitHub();
+                  
+                  showSaveStatus("✅ Memorial tree removed", "success");
+                } else {
+                  console.error("❌ Tree not found for deletion");
+                  showSaveStatus("❌ Error: Tree not found", "error");
+                }
+                
+              } catch (error) {
+                console.error("❌ Error deleting tree:", error);
+                showSaveStatus("❌ Error removing memorial tree", "error");
+              } finally {
+                // Re-enable button
+                newDeleteBtn.disabled = false;
+                newDeleteBtn.textContent = "🗑️ Remove";
+              }
+            }
+          });
+          
+          // Add input validation and real-time feedback
+          const inputs = [treeTypeInput, inMemoryOfInput, plantedByInput, plantingDateInput, notesTextarea];
+          inputs.forEach(input => {
+            input.addEventListener('input', () => {
+              // Visual feedback that changes are being tracked
+              input.style.borderColor = '#059669';
+              setTimeout(() => {
+                input.style.borderColor = '#d1d5db';
+              }, 1000);
+            });
+          });
+          
+        }, 100); // Small delay to ensure DOM is ready
       });
       
       return treeObj;
@@ -380,7 +513,7 @@
     const GITHUB_USERNAME = "DanHab73";
     const GITHUB_REPO = "whereismytree";
     const DATA_FILE = "memorial-trees-data.json";
-    const GITHUB_TOKEN = ""; // You'll need to set this up
+    const GITHUB_TOKEN = "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"; // Replace with your GitHub token
     
     // Authentication system
     let isAuthenticated = false;
@@ -419,6 +552,8 @@
     // GitHub Data Management
     async function loadTreeDataFromGitHub() {
       try {
+        console.log("🔄 Loading memorial trees from GitHub...");
+        
         const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${DATA_FILE}?_=${Date.now()}`, {
           headers: {
             'Accept': 'application/vnd.github.v3+json',
@@ -430,21 +565,54 @@
           const data = await response.json();
           const content = JSON.parse(atob(data.content));
           
-          // Load existing trees
-          if (content.trees && content.trees.length > 0) {
-            content.trees.forEach(treeData => {
-              const latlng = { lat: treeData.lat, lng: treeData.lng };
-              addMemorialTree(latlng, treeData, false); // false = don't save to GitHub again
-            });
+          // Validate data structure
+          if (!content.trees || !Array.isArray(content.trees)) {
+            console.warn("⚠️ Invalid data structure, expected trees array");
+            console.log("✅ Loaded 0 memorial trees from GitHub");
+            return;
           }
           
-          console.log(`✅ Loaded ${content.trees.length} memorial trees from GitHub`);
-        } else {
+          // Load existing trees
+          let loadedCount = 0;
+          content.trees.forEach((treeData, index) => {
+            try {
+              // Validate tree data
+              if (!treeData.lat || !treeData.lng) {
+                console.warn(`⚠️ Skipping tree ${index}: missing coordinates`);
+                return;
+              }
+              
+              const latlng = { lat: treeData.lat, lng: treeData.lng };
+              addMemorialTree(latlng, treeData, false); // false = don't save to GitHub again
+              loadedCount++;
+              
+            } catch (treeError) {
+              console.error(`❌ Error loading tree ${index}:`, treeError);
+            }
+          });
+          
+          console.log(`✅ Loaded ${loadedCount} memorial trees from GitHub`);
+          
+          // Show status to user
+          if (loadedCount > 0) {
+            showSaveStatus(`✅ Loaded ${loadedCount} memorial trees`, "success");
+          }
+          
+        } else if (response.status === 404) {
           console.log("📁 No existing data file found, starting fresh");
+          console.log("✅ Loaded 0 memorial trees from GitHub");
+        } else {
+          console.error("❌ Error response from GitHub:", response.status);
+          console.log("🔄 Starting with empty map");
         }
       } catch (error) {
         console.error("❌ Error loading data from GitHub:", error);
         console.log("🔄 Starting with empty map");
+        
+        // Show error to user if it's a network issue
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          showSaveStatus("⚠️ Network error loading trees - check connection", "error");
+        }
       }
     }
     
@@ -471,61 +639,112 @@
           version: "1.0"
         };
         
-        // Get current file SHA (required for updates)
-        const currentFile = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${DATA_FILE}`, {
-          headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'Memorial-Tree-Map'
-          }
-        });
-        
-        let sha = null;
-        if (currentFile.ok) {
-          const currentData = await currentFile.json();
-          sha = currentData.sha;
-        }
-        
-        // Create the commit
-        const commitData = {
-          message: `Update memorial trees data - ${treeData.trees.length} trees`,
-          content: btoa(JSON.stringify(treeData, null, 2)),
-          branch: 'main'
-        };
-        
-        if (sha) {
-          commitData.sha = sha;
-        }
-        
-        // Note: This would require a GitHub token for full automation
-        // For now, we'll show instructions to update manually
-        console.log("💾 Tree data ready for GitHub:", treeData);
-        
-        // Display manual update instructions
+        // Only attempt GitHub API save if token is available
         if (GITHUB_TOKEN) {
-          // If token is provided, auto-save (advanced users)
-          const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${DATA_FILE}`, {
-            method: 'PUT',
-            headers: {
-              'Accept': 'application/vnd.github.v3+json',
-              'Authorization': `token ${GITHUB_TOKEN}`,
-              'User-Agent': 'Memorial-Tree-Map'
-            },
-            body: JSON.stringify(commitData)
-          });
-          
-          if (response.ok) {
-            console.log("✅ Successfully saved to GitHub");
-          } else {
-            console.error("❌ Failed to save to GitHub");
+          try {
+            console.log("🔄 Attempting to save to GitHub...");
+            
+            // Get current file SHA (required for updates)
+            const currentFile = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${DATA_FILE}`, {
+              headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'User-Agent': 'Memorial-Tree-Map'
+              }
+            });
+            
+            let sha = null;
+            if (currentFile.ok) {
+              const currentData = await currentFile.json();
+              sha = currentData.sha;
+            }
+            
+            // Create the commit
+            const commitData = {
+              message: `Update memorial trees data - ${treeData.trees.length} trees`,
+              content: btoa(JSON.stringify(treeData, null, 2)),
+              branch: 'main'
+            };
+            
+            if (sha) {
+              commitData.sha = sha;
+            }
+            
+            // Try to save to GitHub
+            const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${DATA_FILE}`, {
+              method: 'PUT',
+              headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'User-Agent': 'Memorial-Tree-Map'
+              },
+              body: JSON.stringify(commitData)
+            });
+            
+            if (response.ok) {
+              console.log("✅ Successfully saved to GitHub");
+              // Show success message to user
+              showSaveStatus("✅ Memorial trees saved automatically to GitHub!", "success");
+              return; // Success - don't show manual instructions
+            } else {
+              // GitHub API failed, get error details
+              const errorData = await response.json();
+              console.error("❌ GitHub API error:", response.status, errorData);
+              throw new Error(`GitHub API error: ${response.status} - ${errorData.message}`);
+            }
+            
+          } catch (githubError) {
+            console.error("❌ GitHub save failed:", githubError);
+            // Fall through to manual save process
           }
-        } else {
-          // Manual update process (beginner-friendly)
-          showManualUpdateInstructions(treeData);
         }
+        
+        // If we reach here, either no token or GitHub API failed
+        // Fall back to manual save process
+        console.log("🔄 Falling back to manual save process");
+        showManualUpdateInstructions(treeData);
         
       } catch (error) {
-        console.error("❌ Error saving to GitHub:", error);
+        console.error("❌ Error in saveTreeDataToGitHub:", error);
+        showSaveStatus("❌ Error saving memorial trees. Please try again.", "error");
       }
+    }
+    
+    // New function to show save status to user
+    function showSaveStatus(message, type) {
+      // Remove any existing status messages
+      const existingStatus = document.querySelector('.save-status');
+      if (existingStatus) {
+        existingStatus.remove();
+      }
+      
+      // Create status message
+      const statusDiv = document.createElement('div');
+      statusDiv.className = 'save-status';
+      statusDiv.textContent = message;
+      statusDiv.style.cssText = `
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2000;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        max-width: 90vw;
+        text-align: center;
+        ${type === 'success' ? 'background: #059669; color: white;' : 'background: #dc2626; color: white;'}
+      `;
+      
+      document.body.appendChild(statusDiv);
+      
+      // Remove after 4 seconds
+      setTimeout(() => {
+        if (statusDiv.parentNode) {
+          statusDiv.remove();
+        }
+      }, 4000);
     }
     
     function showManualUpdateInstructions(treeData) {
@@ -540,15 +759,20 @@
       a.click();
       URL.revokeObjectURL(url);
       
-      // Show instructions
-      alert(`📁 Data file downloaded!\n\n` +
-            `To save permanently:\n` +
-            `1. The file "${DATA_FILE}" has been downloaded\n` +
-            `2. Go to your GitHub repository\n` +
-            `3. Click "Upload files" or edit the existing file\n` +
-            `4. Replace the content with the downloaded file\n` +
-            `5. Commit the changes\n\n` +
-            `This will make your trees visible to everyone!`);
+      // Show instructions with better formatting
+      showSaveStatus("⚠️ Auto-save failed - Data downloaded for manual upload", "error");
+      
+      // Show detailed instructions
+      setTimeout(() => {
+        alert(`📁 Data file downloaded!\n\n` +
+              `Auto-save to GitHub failed, please upload manually:\n\n` +
+              `1. The file "${DATA_FILE}" has been downloaded\n` +
+              `2. Go to: https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}\n` +
+              `3. Click "Upload files" or edit the existing file\n` +
+              `4. Replace the content with the downloaded file\n` +
+              `5. Commit the changes\n\n` +
+              `This will make your trees visible to everyone!`);
+      }, 1000);
     }
     
     // Load data when page starts
