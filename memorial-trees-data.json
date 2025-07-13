@@ -9,7 +9,7 @@
       "plantedBy": "Wednesday",
       "plantingDate": "2025-07-13",
       "notes": "",
-      "recordedOn": "2025-07-13T09:48:41.050Z"
+      "recordedOn": "2025-07-13T09:48:53.358Z"
     },
     {
       "lat": 341.30244200578096,
@@ -20,7 +20,7 @@
       "plantedBy": "Charlotte",
       "plantingDate": "2025-07-13",
       "notes": "",
-      "recordedOn": "2025-07-13T09:48:41.050Z"
+      "recordedOn": "2025-07-13T09:48:53.358Z"
     },
     {
       "lat": 223.57093762051156,
@@ -31,7 +31,7 @@
       "plantedBy": "Orange",
       "plantingDate": "2025-07-13",
       "notes": "Testing",
-      "recordedOn": "2025-07-13T09:48:41.050Z"
+      "recordedOn": "2025-07-13T09:48:53.358Z"
     },
     {
       "lat": 287.1661258091435,
@@ -42,7 +42,7 @@
       "plantedBy": "dghm",
       "plantingDate": "2025-07-13",
       "notes": "",
-      "recordedOn": "2025-07-13T09:48:41.050Z"
+      "recordedOn": "2025-07-13T09:48:53.358Z"
     },
     {
       "lat": 348.1311159150378,
@@ -53,7 +53,7 @@
       "plantedBy": "ghm",
       "plantingDate": "2025-07-13",
       "notes": "",
-      "recordedOn": "2025-07-13T09:48:41.050Z"
+      "recordedOn": "2025-07-13T09:48:53.358Z"
     },
     {
       "lat": 464.56915523956167,
@@ -64,9 +64,20 @@
       "plantedBy": "dfgn",
       "plantingDate": "2025-07-13",
       "notes": "",
-      "recordedOn": "2025-07-13T09:48:41.050Z"
+      "recordedOn": "2025-07-13T09:48:53.358Z"
+    },
+    {
+      "lat": 415.0716805565034,
+      "lng": 259.50818869546293,
+      "coordinates": "X:25, Y:46",
+      "treeType": "",
+      "inMemoryOf": "",
+      "plantedBy": "",
+      "plantingDate": "2025-07-13",
+      "notes": "",
+      "recordedOn": "2025-07-13T09:48:53.358Z"
     }
   ],
-  "lastUpdated": "2025-07-13T09:48:41.050Z",
+  "lastUpdated": "2025-07-13T09:48:53.358Z",
   "version": "1.0"
 }
