@@ -1,5 +1,17 @@
 {
-  "trees": [],
-  "lastUpdated": "2024-01-15T00:00:00.000Z",
+  "trees": [
+    {
+      "lat": 433.4564568673536,
+      "lng": 169.70562748477138,
+      "coordinates": "X:17, Y:44",
+      "treeType": "Monday",
+      "inMemoryOf": "Tuesday",
+      "plantedBy": "Wednesday",
+      "plantingDate": "2025-07-13",
+      "notes": "",
+      "recordedOn": "2025-07-13T09:37:04.589Z"
+    }
+  ],
+  "lastUpdated": "2025-07-13T09:37:04.589Z",
   "version": "1.0"
-} 
+}
