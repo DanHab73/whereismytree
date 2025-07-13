@@ -8,7 +8,9 @@ A web-based interactive map for documenting memorial trees planted during the **
 - **Memorial Details**: Record tree type, planting date, who it's in memory of, and who planted it
 - **Coordinate System**: 100x100 grid overlay for precise location recording
 - **Hover Information**: Quick view of memorial details when hovering over tree markers
-- **Export Data**: Download all memorial tree data as JSON
+- **Persistent Storage**: Trees are automatically saved to GitHub and persist between sessions
+- **Auto-Sync**: Data synchronizes across all devices viewing the map
+- **Export Data**: Download all memorial tree data as JSON backup
 - **Access Control**: Public viewing with password-protected editing
 
 ## 🎯 Purpose
