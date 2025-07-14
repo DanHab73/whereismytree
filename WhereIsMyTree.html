@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' https://api.github.com; img-src 'self' data: blob:;">
   <title>Maumahara Matariki - Memorial Tree Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -9,11 +10,65 @@
     html,body{height:100%;margin:0;font-family:sans-serif;}
     #map{height:100%;width:100%;}
     .leaflet-popup-content{width:280px;}
-    #toolbar{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:rgba(255,255,255,0.95);padding:12px 18px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:flex;gap:15px;align-items:center;flex-wrap:wrap;max-width:90vw;}
-    #exportBtn{padding:8px 15px;border:none;background:#8B4513;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;}
+    
+    /* Improved toolbar positioning */
+    #toolbar{
+      position:fixed;
+      top:10px;
+      left:50%;
+      transform:translateX(-50%);
+      z-index:1000;
+      background:rgba(255,255,255,0.98);
+      padding:12px 18px;
+      border-radius:12px;
+      box-shadow:0 4px 16px rgba(0,0,0,0.2);
+      display:flex;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:center;
+      max-width:95vw;
+      box-sizing:border-box;
+    }
+    
+    /* Toolbar title section */
+    .toolbar-title{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      margin-right:20px;
+      min-width:200px;
+    }
+    
+    /* Toolbar buttons */
+    .toolbar-buttons{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    
+    /* Base button styles */
+    .toolbar-btn{
+      padding:8px 12px;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+      font-weight:500;
+      font-size:0.9rem;
+      white-space:nowrap;
+      transition:all 0.2s;
+    }
+    
+    #exportBtn{background:#8B4513;color:#fff;}
     #exportBtn:hover{background:#654321;}
-    #coordinateToggle{padding:8px 15px;border:none;background:#2563eb;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;margin-left:10px;}
+    #coordinateToggle{background:#2563eb;color:#fff;}
     #coordinateToggle:hover{background:#1d4ed8;}
+    #loginBtn{background:#2563eb;color:#fff;}
+    #loginBtn:hover{background:#1d4ed8;}
+    #logoutBtn{background:#dc2626;color:#fff;}
+    #logoutBtn:hover{background:#b91c1c;}
+    
     select{padding:6px;border-radius:6px;border:1px solid #d1d5db;}
     .custom-marker{transform:translate(-12px,-12px);} 
     .tree-form{display:flex;flex-direction:column;gap:10px;}
@@ -24,44 +79,202 @@
     .delete-btn{background:#dc2626;color:#fff;}
     .delete-btn:hover{background:#b91c1c;}
     .tree-info{font-size:0.9rem;color:#374151;margin-bottom:10px;line-height:1.4;}
+    
+    /* Typography */
     h3{margin:0 0 10px 0;color:#8B4513;font-size:1.2rem;}
     h4{margin:0;color:#8B4513;font-size:1rem;}
     .maori-subtitle{font-size:0.8rem;color:#6B7280;font-style:italic;}
+    
     .coordinate-grid{stroke:#333;stroke-width:0.5;fill:none;opacity:0.7;}
     .coordinate-labels{font-size:10px;fill:#333;font-family:monospace;}
-         .memorial-icon{width:24px;height:24px;border-radius:50%;background:#8B4513;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid white;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);}
-         .memorial-icon.empty-memorial{background:#6B7280;border-color:#E5E7EB;animation:pulse 2s infinite;}
-         @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
-     .leaflet-tooltip{background:rgba(0,0,0,0.8)!important;color:#fff!important;padding:8px 10px!important;border-radius:6px!important;font-size:0.9rem!important;box-shadow:0 2px 8px rgba(0,0,0,0.3)!important;max-width:250px!important;line-height:1.3!important;border:none!important;}
-     .leaflet-tooltip-top:before{border-top-color:rgba(0,0,0,0.8)!important;}
-     #loginBtn{padding:8px 15px;border:none;background:#2563eb;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;margin-left:10px;}
-     #loginBtn:hover{background:#1d4ed8;}
-     #logoutBtn{padding:8px 15px;border:none;background:#dc2626;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;margin-left:10px;}
-     #logoutBtn:hover{background:#b91c1c;}
-     .login-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;z-index:2000;align-items:center;justify-content:center;}
-     .login-form{background:#fff;padding:30px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-width:400px;width:90%;text-align:center;}
-     .login-form h3{margin:0 0 20px 0;color:#8B4513;}
-     .login-form input{width:100%;padding:12px;margin:10px 0;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;box-sizing:border-box;}
-     .login-form button{width:100%;padding:12px;margin:10px 0;border:none;border-radius:6px;font-size:1rem;cursor:pointer;font-weight:500;}
-     .login-submit{background:#8B4513;color:#fff;}
-     .login-submit:hover{background:#654321;}
-     .login-cancel{background:#6B7280;color:#fff;}
-     .login-cancel:hover{background:#4B5563;}
-     .editing-disabled{opacity:0.5;pointer-events:none;}
-     .view-only-notice{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);padding:8px 16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:0.9rem;color:#6B7280;z-index:1000;}
+    
+    /* Memorial tree icons */
+    .memorial-icon{
+      width:28px;
+      height:28px;
+      border-radius:50%;
+      background:#8B4513;
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:2px solid white;
+      font-size:16px;
+      box-shadow:0 2px 4px rgba(0,0,0,0.3);
+    }
+    .memorial-icon.empty-memorial{background:#6B7280;border-color:#E5E7EB;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+    
+    /* Tooltips */
+    .leaflet-tooltip{background:rgba(0,0,0,0.8)!important;color:#fff!important;padding:8px 10px!important;border-radius:6px!important;font-size:0.9rem!important;box-shadow:0 2px 8px rgba(0,0,0,0.3)!important;max-width:250px!important;line-height:1.3!important;border:none!important;}
+    .leaflet-tooltip-top:before{border-top-color:rgba(0,0,0,0.8)!important;}
+    
+    /* Login modal */
+    .login-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;z-index:2000;align-items:center;justify-content:center;}
+    .login-form{background:#fff;padding:30px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-width:400px;width:90%;text-align:center;}
+    .login-form h3{margin:0 0 20px 0;color:#8B4513;}
+    .login-form input{width:100%;padding:12px;margin:10px 0;border:1px solid #d1d5db;border-radius:6px;font-size:1rem;box-sizing:border-box;}
+    .login-form button{width:100%;padding:12px;margin:10px 0;border:none;border-radius:6px;font-size:1rem;cursor:pointer;font-weight:500;}
+    .login-submit{background:#8B4513;color:#fff;}
+    .login-submit:hover{background:#654321;}
+    .login-cancel{background:#6B7280;color:#fff;}
+    .login-cancel:hover{background:#4B5563;}
+    
+    .editing-disabled{opacity:0.5;pointer-events:none;}
+    .view-only-notice{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.95);padding:8px 16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:0.9rem;color:#6B7280;z-index:1000;}
+    
+    /* Mobile responsive design */
+    @media (max-width: 768px) {
+      #toolbar{
+        position:fixed;
+        top:5px;
+        left:5px;
+        right:5px;
+        transform:none;
+        max-width:none;
+        padding:8px 10px;
+        gap:8px;
+        flex-direction:column;
+        align-items:stretch;
+      }
+      
+      .toolbar-title{
+        margin-right:0;
+        margin-bottom:8px;
+        min-width:auto;
+        text-align:center;
+      }
+      
+      .toolbar-title h3{
+        font-size:1.1rem;
+        margin-bottom:2px;
+      }
+      
+      .toolbar-title h4{
+        font-size:0.9rem;
+      }
+      
+      .maori-subtitle{
+        font-size:0.75rem;
+      }
+      
+      .toolbar-buttons{
+        justify-content:center;
+        gap:6px;
+      }
+      
+      .toolbar-btn{
+        padding:10px 12px;
+        font-size:0.85rem;
+        flex:1;
+        min-width:auto;
+      }
+      
+      /* Larger tree markers for mobile */
+      .memorial-icon{
+        width:40px;
+        height:40px;
+        font-size:20px;
+        border-width:3px;
+      }
+      
+      .custom-marker{
+        transform:translate(-20px,-20px);
+      }
+      
+      /* Adjust popup for mobile */
+      .leaflet-popup-content{
+        width:260px;
+      }
+      
+      .tree-form input, .tree-form textarea{
+        padding:12px;
+        font-size:16px; /* Prevents zoom on iOS */
+      }
+      
+      .tree-form button{
+        padding:12px 20px;
+        font-size:1rem;
+      }
+      
+      /* Adjust tooltip size for mobile */
+      .leaflet-tooltip{
+        font-size:0.8rem!important;
+        padding:6px 8px!important;
+        max-width:200px!important;
+      }
+      
+      /* View-only notice for mobile */
+      .view-only-notice{
+        bottom:10px;
+        left:10px;
+        right:10px;
+        transform:none;
+        font-size:0.8rem;
+        text-align:center;
+      }
+      
+      /* Login modal adjustments */
+      .login-form{
+        padding:20px;
+        margin:10px;
+      }
+      
+      .login-form input{
+        font-size:16px; /* Prevents zoom on iOS */
+      }
+      
+      /* Make map fully utilize space on mobile */
+      #map{
+        padding-top:0;
+      }
+    }
+    
+    /* Extra small screens */
+    @media (max-width: 480px) {
+      .toolbar-btn{
+        padding:8px 10px;
+        font-size:0.8rem;
+      }
+      
+      .toolbar-title h3{
+        font-size:1rem;
+      }
+      
+      .toolbar-title h4{
+        font-size:0.85rem;
+      }
+      
+      /* Even larger markers for small screens */
+      .memorial-icon{
+        width:44px;
+        height:44px;
+        font-size:22px;
+      }
+      
+      .custom-marker{
+        transform:translate(-22px,-22px);
+      }
+      
+      .leaflet-popup-content{
+        width:240px;
+      }
+    }
   </style>
 </head>
 <body>
       <div id="toolbar">
-      <div>
-        <h3 style="margin:0 0 4px 0;color:#8B4513;font-size:1.3rem;">Ōtara Creek Reserve</h3>
+      <div class="toolbar-title">
+        <h3>Ōtara Creek Reserve</h3>
         <h4>🌳 Maumahara Matariki</h4>
         <div class="maori-subtitle">Memorial Stake and Tree Event</div>
       </div>
-            <button id="exportBtn">📋 Export Memorial Data</button>
-      <button id="coordinateToggle">📍 Hide Grid</button>
-      <button id="loginBtn">🔐 Log in to Update Map</button>
-      <button id="logoutBtn" style="display:none;">🚪 Log out</button>
+      <div class="toolbar-buttons">
+        <button id="exportBtn" class="toolbar-btn">📋 Export Data</button>
+        <button id="coordinateToggle" class="toolbar-btn">📍 Hide Grid</button>
+        <button id="loginBtn" class="toolbar-btn">🔐 Log in</button>
+        <button id="logoutBtn" class="toolbar-btn" style="display:none;">🚪 Log out</button>
+      </div>
     </div>
     <div id="map"></div>
     <div class="view-only-notice" id="viewOnlyNotice">
@@ -204,11 +417,26 @@
 
     /* ---------- Memorial Tree Functions ---------- */
     function memorialIcon(isEmpty = false) {
+      // Detect if mobile device
+      const isMobile = window.innerWidth <= 768;
+      const isSmallMobile = window.innerWidth <= 480;
+      
+      let iconSize = 28;
+      let iconAnchor = 14;
+      
+      if (isSmallMobile) {
+        iconSize = 44;
+        iconAnchor = 22;
+      } else if (isMobile) {
+        iconSize = 40;
+        iconAnchor = 20;
+      }
+      
       return L.divIcon({
         className: "custom-marker",
         html: `<div class="memorial-icon ${isEmpty ? 'empty-memorial' : ''}">${isEmpty ? '🌲' : '🌳'}</div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
+        iconSize: [iconSize, iconSize],
+        iconAnchor: [iconAnchor, iconAnchor]
       });
     }
 
@@ -778,6 +1006,18 @@
     
     // Load data when page starts
     loadTreeDataFromGitHub();
+    
+    // Handle window resize and orientation changes
+    function updateIconSizes() {
+      memorialTrees.forEach(tree => {
+        const isEmpty = !tree.inMemoryOf && !tree.plantedBy && !tree.treeType;
+        tree.marker.setIcon(memorialIcon(isEmpty));
+      });
+    }
+    
+    // Update icon sizes on window resize
+    window.addEventListener('resize', updateIconSizes);
+    window.addEventListener('orientationchange', updateIconSizes);
 
     // Toggle coordinate grid
     document.getElementById("coordinateToggle").addEventListener("click", toggleCoordinateGrid);
